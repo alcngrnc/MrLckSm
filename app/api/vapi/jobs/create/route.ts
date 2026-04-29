@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         address: body.address,
         problem_type: body.problem_type || null,
         description: body.description || null,
-        status: "pending_customer_confirmation",
+        status: "new",
         confirmation_token,
         price_quote_min: pricing.min,
         price_quote_max: pricing.max,
