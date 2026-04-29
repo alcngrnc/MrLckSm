@@ -43,14 +43,27 @@ export async function POST(req: Request) {
     const secret = req.headers.get("x-ai-secret");
 
     if (secret !== process.env.AI_WEBHOOK_SECRET) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          supabase_inserted: false,
+          supabase_error: null,
+          error: "Unauthorized",
+        },
+        { status: 401 }
+      );
     }
 
     const body = (await req.json()) as Body;
 
     if (!body.first_name || !body.phone || !body.address) {
       return NextResponse.json(
-        { error: "first_name, phone and address are required" },
+        {
+          success: false,
+          supabase_inserted: false,
+          supabase_error: null,
+          error: "first_name, phone and address are required",
+        },
         { status: 400 }
       );
     }
@@ -65,7 +78,6 @@ export async function POST(req: Request) {
     const confirmation_token = generateToken();
     const pricing = getPricing(body.problem_type);
 
-    // 🔥 GEOCODE EKLENDİ
     let lat: number | null = null;
     let lng: number | null = null;
 
@@ -97,8 +109,6 @@ export async function POST(req: Request) {
         price_quote_note:
           "Final price depends on lock type, vehicle model, key type, location, time, and job complexity. Technician confirms final price before starting.",
         source: "vapi",
-
-        // 🔥 KRİTİK FIX
         lat,
         lng,
       })
@@ -106,7 +116,15 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        {
+          success: false,
+          supabase_inserted: false,
+          supabase_error: error.message,
+          error: error.message,
+        },
+        { status: 500 }
+      );
     }
 
     const siteUrl =
@@ -137,20 +155,23 @@ export async function POST(req: Request) {
       console.error("CONFIRMATION_SMS_ERROR", smsError);
       smsResult = {
         success: false,
+        notification_status: "sms_failed",
         error: "SMS failed but job was created.",
       };
     }
 
     return NextResponse.json({
       success: true,
+      supabase_inserted: Boolean(data?.id),
+      supabase_error: null,
       job_id: data.id,
       tracking_code,
       confirm_link: confirmLink,
       tracking_link: trackingLink,
       price_min: pricing.min,
       price_max: pricing.max,
-      lat,   // debug için ekledim
-      lng,   // debug için ekledim
+      lat,
+      lng,
       sms: smsResult,
       vapi_response: `Thank you ${body.first_name}. I created your request and sent a confirmation link to your phone. The estimated price range is ${pricing.min} to ${pricing.max} dollars. Please confirm the request using the link.`,
     });
@@ -158,7 +179,12 @@ export async function POST(req: Request) {
     console.error("CREATE_JOB_ERROR", err);
 
     return NextResponse.json(
-      { error: "Failed to create job" },
+      {
+        success: false,
+        supabase_inserted: false,
+        supabase_error: null,
+        error: "Failed to create job",
+      },
       { status: 500 }
     );
   }
