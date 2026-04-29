@@ -23,17 +23,16 @@ export async function POST(req: Request) {
     }
 
     if (process.env.SMS_ENABLED !== "true") {
-      console.log("SMS_DISABLED_FAKE_SEND", {
+      console.log("SMS_DISABLED", {
         to: body.to,
         message: body.message,
       });
 
       return NextResponse.json({
-        success: true,
-        mode: "fake",
-        to: body.to,
-        message: body.message,
-      });
+  success: true,
+  notification_status: "sms_disabled",
+  message: "SMS sending is disabled in this environment.",
+});
     }
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
